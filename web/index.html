@@ -365,6 +365,8 @@
 <script>
 const $ = id => document.getElementById(id);
 let pollTimer = null;
+const jobCache = new Map();   // jobId -> job 数据（onclick 只传 id，防注入）
+const hwCache = new Map();    // 序号 -> 热词错误词
 
 /* ---------- 上传 ---------- */
 const drop = $('drop');
@@ -391,7 +393,16 @@ async function uploadFile(file) {
     alert('上传失败：' + (err.detail || res.statusText));
     return;
   }
-  refresh();
+  const job = await res.json();
+  refresh().then(() => {
+    // 新任务卡高亮 2 秒，给出"已开始处理"的即时反馈
+    const el = document.querySelector(`.job[data-job-id="${job.id}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.background = '#f0f7ff';
+      setTimeout(() => el.style.background = '', 2000);
+    }
+  });
 }
 
 /* ---------- 任务列表 ---------- */
@@ -401,7 +412,7 @@ async function refresh() {
   jobs.forEach(j => jobCache.set(j.id, j));
   $('jobs').innerHTML = jobs.map(j => {
     const st = {queued:'排队中',processing:'转写中',done:'已完成',failed:'失败'}[j.status] || j.status;
-    let html = `<div class="job">
+    let html = `<div class="job" data-job-id="${j.id}">
       <div class="row1">
         <div class="name">${esc(j.filename)}</div>
         <div class="time">${new Date(j.created*1000).toLocaleString('zh-CN')}</div>
