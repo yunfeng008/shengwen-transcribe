@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<title>声文 · 录音转写</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(180deg, #eef2f7 0%, #f5f6f8 240px);
+    color: #333; min-height: 100vh;
+  }
+  .container { max-width: 820px; margin: 0 auto; padding: 28px 16px 80px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+  h1 { font-size: 21px; font-weight: 700; letter-spacing: .5px; }
+  h1 .sub { font-size: 12px; color: #98a2b3; font-weight: 400; margin-left: 8px; }
+  .settings-btn {
+    background: #fff; border: 1px solid #e4e7ec; border-radius: 10px;
+    padding: 7px 16px; cursor: pointer; color: #667085; font-size: 13px;
+    transition: all .15s;
+  }
+  .settings-btn:hover { border-color: #1a5cb0; color: #1a5cb0; }
+
+  /* ---------- 上传区 ---------- */
+  .drop {
+    background: #fff; border: 2px dashed #cdd5df; border-radius: 16px;
+    padding: 52px 20px; text-align: center; cursor: pointer; transition: all .18s;
+    box-shadow: 0 1px 2px rgba(16,24,40,.04);
+  }
+  .drop:hover, .drop.over { border-color: #1a5cb0; background: #f7faff; transform: translateY(-1px); }
+  .drop .icon { font-size: 42px; margin-bottom: 12px; }
+  .drop .main { font-size: 16px; color: #3a4454; margin-bottom: 6px; font-weight: 500; }
+  .drop .hint { font-size: 12px; color: #98a2b3; }
+  .drop .formats { display: inline-flex; gap: 6px; margin-top: 14px; }
+  .drop .formats span {
+    background: #f2f4f7; color: #667085; font-size: 11px;
+    padding: 3px 10px; border-radius: 20px;
+  }
+
+  /* ---------- 上传区下方的选项栏 ---------- */
+  .options {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #fff; border: 1px solid #e4e7ec; border-radius: 14px;
+    margin-top: 14px; padding: 14px 18px;
+    box-shadow: 0 1px 2px rgba(16,24,40,.04);
+  }
+  .opt-left { display: flex; align-items: center; gap: 14px; }
+  .opt-title { font-size: 14px; color: #3a4454; font-weight: 500; }
+  .opt-desc { font-size: 12px; color: #98a2b3; margin-top: 2px; }
+  .domain-select {
+    padding: 7px 10px; border: 1px solid #d0d5dd; border-radius: 9px;
+    font-size: 13px; color: #3a4454; background: #fff; outline: none;
+    min-width: 150px;
+  }
+  .domain-select:focus { border-color: #1a5cb0; }
+  /* 开关样式 */
+  .switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .track {
+    position: absolute; inset: 0; background: #d0d5dd; border-radius: 24px;
+    transition: background .2s; cursor: pointer;
+  }
+  .switch .track::before {
+    content: ""; position: absolute; width: 18px; height: 18px; border-radius: 50%;
+    background: #fff; top: 3px; left: 3px; transition: transform .2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  }
+  .switch input:checked + .track { background: #1a5cb0; }
+  .switch input:checked + .track::before { transform: translateX(20px); }
+  .llm-status { font-size: 12px; color: #98a2b3; }
+  .llm-status.ok { color: #1c7c46; }
+
+  /* ---------- 任务卡片 ---------- */
+  .section-title {
+    font-size: 13px; color: #98a2b3; font-weight: 500;
+    margin: 28px 4px 10px; letter-spacing: .5px;
+  }
+  .job {
+    background: #fff; border: 1px solid #e9ecf1; border-radius: 14px;
+    padding: 16px 18px; margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(16,24,40,.05);
+    transition: box-shadow .15s;
+  }
+  .job:hover { box-shadow: 0 3px 8px rgba(16,24,40,.08); }
+  .job .row1 { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .job .name { font-weight: 600; font-size: 14px; word-break: break-all; color: #1d2939; }
+  .job .time { font-size: 12px; color: #b6bdc9; white-space: nowrap; }
+  .job .status-line { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+  .badge.queued { background: #fef4e6; color: #b25e09; }
+  .badge.processing { background: #e8f0fd; color: #1a5cb0; }
+  .badge.done { background: #e4f4ea; color: #1c7c46; }
+  .badge.failed { background: #fde8e8; color: #c0392b; }
+  .bar { height: 6px; background: #eef1f5; border-radius: 3px; margin-top: 10px; overflow: hidden; }
+  .bar .fill {
+    height: 100%; border-radius: 3px; transition: width .6s;
+    background: linear-gradient(90deg, #1a5cb0, #4a90d9);
+  }
+  .job .msg { font-size: 12px; color: #98a2b3; margin-top: 7px; }
+  .job .err { font-size: 12px; color: #c0392b; margin-top: 7px; }
+  .stats-line { font-size: 12px; color: #98a2b3; margin-top: 8px; }
+  .stats-line b { color: #475467; font-weight: 600; }
+
+  /* 操作按钮组 */
+  .actions {
+    margin-top: 13px; padding-top: 12px; border-top: 1px solid #f2f4f7;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 13px; padding: 7px 16px; border-radius: 9px;
+    cursor: pointer; text-decoration: none; border: none; transition: all .15s;
+  }
+  .btn-primary { background: #1a5cb0; color: #fff; font-weight: 500; }
+  .btn-primary:hover { background: #154a90; }
+  .btn-ghost { background: #fff; color: #1a5cb0; border: 1px solid #d4e2f5; }
+  .btn-ghost:hover { background: #f0f5ff; }
+  .btn-mini { background: none; color: #667085; padding: 7px 10px; }
+  .btn-mini:hover { color: #1a5cb0; background: #f5f7fa; }
+  .btn-del { background: none; color: #b42318; padding: 7px 10px; margin-left: auto; }
+  .btn-del:hover { background: #fef3f2; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  .empty { text-align: center; color: #c2c9d4; font-size: 13px; margin-top: 44px; }
+
+  /* ---------- 弹层通用 ---------- */
+  .mask {
+    position: fixed; inset: 0; background: rgba(16,24,40,.45);
+    display: none; align-items: center; justify-content: center; z-index: 10;
+  }
+  .mask.show { display: flex; }
+  .dialog {
+    background: #fff; border-radius: 16px; padding: 24px; width: 470px; max-width: 92vw;
+    box-shadow: 0 12px 40px rgba(16,24,40,.18);
+  }
+  .dialog h3 { font-size: 16px; margin-bottom: 16px; color: #1d2939; }
+  .dialog .field { margin-bottom: 14px; }
+  .dialog label { display: block; font-size: 12px; color: #667085; margin-bottom: 5px; }
+  .dialog input, .dialog select {
+    width: 100%; padding: 9px 12px; border: 1px solid #d0d5dd; border-radius: 9px;
+    font-size: 13px; outline: none; transition: border .15s;
+  }
+  .dialog input:focus, .dialog select:focus { border-color: #1a5cb0; }
+  .dialog .note { font-size: 11px; color: #98a2b3; margin-top: 4px; }
+  .dialog .btns { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+  .dialog .btns button { padding: 8px 20px; border-radius: 9px; border: none; cursor: pointer; font-size: 13px; }
+  .dialog .save { background: #1a5cb0; color: #fff; }
+  .dialog .cancel { background: #eef1f5; color: #667085; }
+
+  /* 合并面板 */
+  #speakerList label:hover { background: #f5f7fa !important; }
+  .merge-tip {
+    font-size: 12px; color: #667085; background: #f7f9fc;
+    border-radius: 9px; padding: 10px 12px; margin-bottom: 12px; line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1><img src="/favicon.svg" alt="" style="width:26px;height:26px;vertical-align:-5px;margin-right:6px">声文<span class="sub">100% 本地 · 隐私安全</span></h1>
+    <div style="display:flex;gap:8px">
+      <button class="settings-btn" onclick="openHotwordsMgr()">📖 热词</button>
+      <button class="settings-btn" onclick="openSettings()">⚙ 设置</button>
+    </div>
+  </header>
+
+  <!-- 上传区：只管上传 -->
+  <div class="drop" id="drop">
+    <div class="icon">🎧</div>
+    <div class="main">拖入录音文件，或点击选择</div>
+    <div class="hint">长录音请耐心等待，时长约与录音本身相当，可最小化窗口去忙别的</div>
+    <div class="formats">
+      <span>MP3</span><span>M4A</span><span>WAV</span><span>MP4</span><span>更多…</span>
+    </div>
+    <input type="file" id="fileInput" hidden
+           accept=".mp3,.m4a,.wav,.mp4,.flac,.aac,.ogg,.wma,.mov,.mkv,.webm,.opus">
+  </div>
+
+  <!-- 选项栏 -->
+  <div class="options">
+    <div class="opt-left">
+      <div>
+        <div class="opt-title">录音领域</div>
+        <div class="opt-desc">术语替换与纠错提示词 ·
+          <a href="javascript:void(0)" onclick="openHotwordsMgr($('domainSelect').value)"
+             style="color:#1a5cb0;text-decoration:none">自定义热词</a>
+        </div>
+      </div>
+      <select id="domainSelect" class="domain-select"
+              onchange="document.getElementById('hwDomain').value=this.value">
+        <option value="general" selected>通用</option>
+        <option value="religion">信仰</option>
+        <option value="meeting">工作会议</option>
+        <option value="lecture">授课讲座</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div>
+        <div class="opt-title">AI 深度纠错</div>
+        <div class="opt-desc">需在设置中配置</div>
+      </div>
+      <span class="llm-status" id="llmStatus"></span>
+      <label class="switch">
+        <input type="checkbox" id="polishChk">
+        <span class="track"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="section-title">任务记录</div>
+  <div id="jobs"></div>
+  <div class="empty" id="empty">还没有任务 —— 上传第一段录音开始吧</div>
+</div>
+
+<!-- 合并说话人弹层 -->
+<div class="mask" id="mergeMask">
+  <div class="dialog" style="width:560px">
+    <h3>👥 合并说话人 <span id="mergeJobName" style="font-size:12px;color:#98a2b3;font-weight:400"></span></h3>
+    <div class="merge-tip">勾选同一个人的多个编号（至少 2 个）→ 选择保留的编号 → 合并。合并后 Word / txt 会立即重新生成。</div>
+    <div id="speakerList" style="max-height:300px;overflow-y:auto;margin-bottom:14px"></div>
+    <div class="field" style="display:none" id="keepRow">
+      <label>保留编号（其他编号的发言都归到它）</label>
+      <select id="keepSelect" style="width:100%;padding:9px 12px;border:1px solid #d0d5dd;border-radius:9px;font-size:13px"></select>
+    </div>
+    <div class="field" style="display:none" id="nameRow">
+      <label>命名为（可选，输入真名后 Word 里直接显示名字）</label>
+      <input type="text" id="nameInput" placeholder="如：张三" style="width:100%;padding:9px 12px;border:1px solid #d0d5dd;border-radius:9px;font-size:13px">
+    </div>
+    <div class="btns">
+      <button class="cancel" onclick="closeMerge()">关闭</button>
+      <button class="save" id="mergeBtn" onclick="doMerge()" disabled style="background:#1c7c46;opacity:.4">合并</button>
+    </div>
+  </div>
+</div>
+
+<!-- 校对学习弹层 -->
+<div class="mask" id="learnMask">
+  <div class="dialog" style="width:600px">
+    <h3>📚 校对学习 <span id="learnJobName" style="font-size:12px;color:#98a2b3;font-weight:400"></span></h3>
+    <div id="learnStep1">
+      <div class="merge-tip">你在 Word 里人工修正了错别字后，把<b>改好的文件</b>传到这里。系统自动对比原稿，提取「错误词→正确词」的修正规则，确认后写入热词表——下次转写自动修正。</div>
+      <div class="field">
+        <label>学习到的规则存入哪个领域的热词表</label>
+        <select id="learnDomain" style="width:100%;padding:9px 12px;border:1px solid #d0d5dd;border-radius:9px;font-size:13px">
+          <option value="general" selected>通用</option>
+          <option value="religion">信仰</option>
+          <option value="meeting">工作会议</option>
+          <option value="lecture">授课讲座</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>上传人工校对后的文件（.docx 或 .txt）</label>
+        <div id="learnDrop" onclick="$('learnFile').click()"
+             style="border:2px dashed #cdd5df;border-radius:12px;padding:22px;text-align:center;
+                    cursor:pointer;transition:all .15s;background:#fafbfc">
+          <div id="learnFileName" style="font-size:13px;color:#98a2b3">
+            📄 点击选择文件，或拖拽到这里
+          </div>
+        </div>
+        <input type="file" id="learnFile" accept=".docx,.txt" hidden>
+      </div>
+      <div class="btns">
+        <button class="cancel" onclick="closeLearn()">取消</button>
+        <button class="save" onclick="startLearn()">开始对比分析</button>
+      </div>
+    </div>
+    <div id="learnStep2" style="display:none">
+      <div class="merge-tip" id="learnSummary"></div>
+      <div id="candList" style="max-height:320px;overflow-y:auto;margin-bottom:14px"></div>
+      <div class="btns">
+        <button class="cancel" onclick="closeLearn()">取消</button>
+        <button class="save" id="confirmLearnBtn" onclick="confirmLearn()" style="background:#1c7c46">保存所选到热词表</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 热词管理弹层 -->
+<div class="mask" id="hotwordsMask">
+  <div class="dialog" style="width:560px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <h3 style="margin:0;white-space:nowrap">📖 热词表管理</h3>
+      <button onclick="closeHotwordsMgr()"
+              style="width:30px;height:30px;border:none;border-radius:8px;background:#f2f4f7;
+                     color:#667085;font-size:16px;cursor:pointer;line-height:1;flex-shrink:0"
+              onmouseover="this.style.background='#e4e7ec'"
+              onmouseout="this.style.background='#f2f4f7'">×</button>
+    </div>
+    <select id="hwDomain" onchange="loadHotwords()"
+            style="width:100%;padding:9px 12px;border:1px solid #d0d5dd;border-radius:9px;
+                   font-size:13px;margin-bottom:14px">
+      <option value="general">通用</option>
+      <option value="religion">信仰</option>
+      <option value="meeting">工作会议</option>
+      <option value="lecture">授课讲座</option>
+    </select>
+    <div class="merge-tip">转写完成后自动把「错误词」替换成「正确词」。听完录音发现识别错了，就在这里加一条——以后所有同领域录音自动修正。</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+      <input type="text" id="hwWrong" placeholder="错误词（录音里识别成的样子）"
+             style="flex:1;padding:9px 12px;border:1px solid #d0d5dd;border-radius:9px;font-size:13px">
+      <span style="color:#98a2b3;font-size:16px">→</span>
+      <input type="text" id="hwRight" placeholder="正确词"
+             style="flex:1;padding:9px 12px;border:1px solid #d0d5dd;border-radius:9px;font-size:13px">
+      <button onclick="addHw()" class="btn btn-primary" style="padding:9px 18px">添加</button>
+    </div>
+    <div id="hwList" style="max-height:300px;overflow-y:auto;border:1px solid #eef1f5;
+         border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px">加载中…</div>
+    <details>
+      <summary style="font-size:12px;color:#1a5cb0;cursor:pointer">批量导入（从别处整理的热词表）</summary>
+      <textarea id="hwBulk" rows="4" placeholder="每行一条：&#10;帐户=>账户&#10;预订=>预定"
+        style="width:100%;margin-top:8px;padding:8px 10px;border:1px solid #d0d5dd;border-radius:9px;font-size:12px;font-family:inherit"></textarea>
+      <button onclick="importHw()" style="margin-top:6px;padding:6px 14px;border-radius:8px;border:1px solid #d4e2f5;background:#f0f5ff;color:#1a5cb0;cursor:pointer;font-size:12px">导入到当前领域</button>
+    </details>
+    <div style="text-align:center;margin-top:14px">
+      <button onclick="closeHotwordsMgr()" class="btn btn-ghost" style="padding:8px 28px">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- 设置弹层 -->
+<div class="mask" id="settingsMask">
+  <div class="dialog">
+    <h3>⚙ 设置 · AI 深度纠错</h3>
+    <div class="field">
+      <label>API Key（留空保持不变）</label>
+      <input type="password" id="cfgKey" placeholder="sk-...">
+      <div class="note" id="keyMask"></div>
+    </div>
+    <div class="field">
+      <label>API 地址</label>
+      <input type="text" id="cfgBase" placeholder="https://api.deepseek.com">
+    </div>
+    <div class="field">
+      <label>模型名（填好地址和 Key 后点「获取」可直接选）</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="cfgModel" placeholder="deepseek-chat" autocomplete="off" style="flex:1">
+        <button type="button" onclick="fetchModels()"
+                style="padding:8px 14px;border:1px solid #d4e2f5;border-radius:9px;
+                       background:#f0f5ff;color:#1a5cb0;cursor:pointer;font-size:12px;
+                       white-space:nowrap">⟳ 获取模型</button>
+      </div>
+      <div id="modelChips" style="display:none;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
+      <div class="note" id="modelFetchNote"></div>
+    </div>
+    <div class="field">
+      <label>默认录音领域（影响纠错提示词）</label>
+      <select id="cfgDomain">
+        <option value="general" selected>通用</option>
+        <option value="religion">信仰</option>
+        <option value="meeting">通用会议</option>
+        <option value="lecture">授课讲座</option>
+      </select>
+    </div>
+    <div class="btns">
+      <button class="cancel" onclick="closeSettings()">取消</button>
+      <button class="save" onclick="saveSettings()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let pollTimer = null;
+
+/* ---------- 上传 ---------- */
+const drop = $('drop');
+drop.addEventListener('click', () => $('fileInput').click());
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => {
+  e.preventDefault(); drop.classList.remove('over');
+  if (e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+});
+$('fileInput').addEventListener('change', e => {
+  if (e.target.files.length) uploadFile(e.target.files[0]);
+  e.target.value = '';
+});
+
+async function uploadFile(file) {
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('polish', $('polishChk').checked);
+  fd.append('domain', $('domainSelect').value);
+  const res = await fetch('/api/jobs', { method: 'POST', body: fd });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    alert('上传失败：' + (err.detail || res.statusText));
+    return;
+  }
+  refresh();
+}
+
+/* ---------- 任务列表 ---------- */
+async function refresh() {
+  const jobs = await (await fetch('/api/jobs')).json();
+  $('empty').style.display = jobs.length ? 'none' : 'block';
+  jobs.forEach(j => jobCache.set(j.id, j));
+  $('jobs').innerHTML = jobs.map(j => {
+    const st = {queued:'排队中',processing:'转写中',done:'已完成',failed:'失败'}[j.status] || j.status;
+    let html = `<div class="job">
+      <div class="row1">
+        <div class="name">${esc(j.filename)}</div>
+        <div class="time">${new Date(j.created*1000).toLocaleString('zh-CN')}</div>
+      </div>
+      <div class="status-line">
+        <span class="badge ${j.status}">${st}</span>
+        ${j.files && j.files.polished ? '<span class="badge done">AI 已纠错</span>' : ''}
+      </div>`;
+    if (j.status === 'processing' || j.status === 'queued') {
+      html += `<div class="bar"><div class="fill" style="width:${j.progress}%"></div></div>
+        <div class="msg">${esc(j.message || '等待中...')}</div>`;
+    }
+    if (j.status === 'failed') html += `<div class="err">${esc(j.error||'')}</div>`;
+    if (j.status === 'done' && j.stats) {
+      const s = j.stats;
+      html += `<div class="stats-line">录音 <b>${fmtDur(s.audio_minutes)}</b> ·
+        讲话人 <b>${s.n_speakers}</b> 位 ·
+        <b>${s.n_segments}</b> 句 / <b>${s.n_chars}</b> 字 ·
+        处理 <b>${s.process_minutes}</b> 分钟</div>`;
+    }
+    if (j.status === 'done') {
+      html += `<div class="actions">
+        <a class="btn btn-primary" href="/api/jobs/${j.id}/download/docx">⬇ 下载 Word</a>
+        <a class="btn btn-ghost" href="javascript:void(0)" onclick="openMerge('${j.id}')">👥 合并说话人</a>
+        <a class="btn btn-ghost" href="javascript:void(0)" onclick="openLearn('${j.id}')">📚 校对学习</a>
+        <a class="btn btn-mini" href="/api/jobs/${j.id}/download/txt">txt</a>
+        <button class="btn btn-del" onclick="delJob('${j.id}')">删除</button>
+      </div>`;
+    } else {
+      html += `<div class="actions"><button class="btn btn-del" onclick="delJob('${j.id}')">删除</button></div>`;
+    }
+    return html + `</div>`;
+  }).join('');
+
+  const hasActive = jobs.some(j => j.status === 'processing' || j.status === 'queued');
+  if (hasActive && !pollTimer) pollTimer = setTimeout(async () => { pollTimer = null; await refresh(); }, 2000);
+  if (!hasActive && pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+}
+
+async function delJob(id) {
+  if (!confirm('删除这个任务和它的所有结果文件？')) return;
+  await fetch('/api/jobs/' + id, { method: 'DELETE' });
+  refresh();
+}
+
+/* ---------- 合并说话人 ---------- */
+let mergeJobId = null;
+let mergeSelection = new Set();
+
+async function openMerge(jobId) {
+  mergeJobId = jobId;
+  mergeSelection = new Set();
+  $('mergeJobName').textContent = '· ' + ((jobCache.get(jobId) || {}).filename || '');
+  const data = await (await fetch(`/api/jobs/${jobId}/speakers`)).json();
+  const list = $('speakerList');
+  list.innerHTML = data.speakers.map(s => `
+    <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;cursor:pointer;font-size:13px">
+      <input type="checkbox" onchange="toggleSpk(${s.id}, this.checked)">
+      <b style="min-width:80px">讲话人${s.id}${s.name ? '（' + esc(s.name) + '）' : ''}</b>
+      <span style="color:#98a2b3;font-size:12px">${s.n_sent} 句 / ${s.n_chars} 字</span>
+    </label>`).join('');
+  $('keepRow').style.display = 'none';
+  $('nameRow').style.display = 'none';
+  $('nameInput').value = '';
+  const btn = $('mergeBtn');
+  btn.disabled = true; btn.style.opacity = .4;
+  $('mergeMask').classList.add('show');
+}
+function closeMerge() { $('mergeMask').classList.remove('show'); }
+
+function toggleSpk(id, checked) {
+  if (checked) mergeSelection.add(id); else mergeSelection.delete(id);
+  const keepRow = $('keepRow'), nameRow = $('nameRow'), btn = $('mergeBtn');
+  if (mergeSelection.size >= 1) {
+    if (mergeSelection.size >= 2) {
+      $('keepSelect').innerHTML = [...mergeSelection].map(id =>
+        `<option value="${id}">讲话人${id}</option>`).join('');
+      keepRow.style.display = 'block';
+      btn.textContent = '合并';
+    } else {
+      keepRow.style.display = 'none';
+      btn.textContent = '保存命名';
+    }
+    nameRow.style.display = 'block';
+    btn.disabled = false; btn.style.opacity = 1;
+  } else {
+    keepRow.style.display = 'none';
+    nameRow.style.display = 'none';
+    btn.disabled = true; btn.style.opacity = .4;
+  }
+}
+
+async function doMerge() {
+  const name = $('nameInput').value.trim();
+  const targets = [...mergeSelection];
+  let body;
+  if (targets.length >= 2) {
+    const keep = parseInt($('keepSelect').value);
+    const others = targets.filter(t => t !== keep).map(t => '讲话人' + t).join('、');
+    if (!confirm(`把 ${others} 合并到 讲话人${keep}${name ? '，并命名为「' + name + '」' : ''}？合并后 Word/txt 立即重新生成。`)) return;
+    body = {targets, keep, name: name || undefined};
+  } else {
+    if (!name) { alert('请输入名字，或勾选 2 个以上编号进行合并'); return; }
+    if (!confirm(`把 讲话人${targets[0]} 命名为「${name}」？`)) return;
+    body = {targets, keep: targets[0], name};
+  }
+  const res = await fetch(`/api/jobs/${mergeJobId}/merge`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) { alert('操作失败：' + ((await res.json().catch(()=>({}))).detail || res.statusText)); return; }
+  const r = await res.json();
+  alert(`✓ 完成，现在共 ${r.n_speakers} 位讲话人，文件已重新生成`);
+  closeMerge();
+  refresh();
+}
+
+/* ---------- 设置 ---------- */
+async function openSettings() {
+  const cfg = await (await fetch('/api/settings')).json();
+  $('cfgBase').value = cfg.llm_api_base || 'https://api.deepseek.com';
+  $('cfgModel').value = cfg.llm_model || 'deepseek-chat';
+  $('cfgDomain').value = cfg.domain || 'general';
+  $('cfgKey').value = '';
+  $('keyMask').textContent = cfg.llm_api_key_masked ? '当前已设置：' + cfg.llm_api_key_masked : '尚未设置';
+  $('settingsMask').classList.add('show');
+}
+
+/* ---------- 热词管理 ---------- */
+function openHotwordsMgr(domain) {
+  if (domain) $('hwDomain').value = domain;
+  $('hotwordsMask').classList.add('show');
+  loadHotwords();
+}
+function closeHotwordsMgr() { $('hotwordsMask').classList.remove('show'); }
+
+async function loadHotwords() {
+  const domain = $('hwDomain').value;
+  const items = await (await fetch(`/api/hotwords?domain=${domain}`)).json();
+  items.forEach((it, idx) => hwCache.set(idx, it.wrong));
+  $('hwList').innerHTML = items.length
+    ? items.map(i => `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0">
+        <span><s style="color:#c0392b">${esc(i.wrong)}</s> → <b>${esc(i.right)}</b></span>
+        <a href="javascript:void(0)" onclick="delHw(${items.indexOf(i)})" style="color:#b42318;text-decoration:none">删</a>
+      </div>`).join('')
+    : '<div style="color:#c2c9d4;text-align:center;padding:10px">此领域暂无热词</div>';
+}
+async function addHw() {
+  const wrong = $('hwWrong').value.trim(), right = $('hwRight').value.trim();
+  if (!wrong || !right) { alert('错误词和正确词都要填'); return; }
+  const res = await fetch('/api/hotwords', { method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({domain: $('hwDomain').value, wrong, right}) });
+  if (!res.ok) { alert((await res.json().catch(()=>({}))).detail || '添加失败'); return; }
+  $('hwWrong').value = ''; $('hwRight').value = '';
+  loadHotwords();
+}
+async function delHw(idx) {
+  const wrong = hwCache.get(idx);
+  if (wrong === undefined) return;
+  await fetch('/api/hotwords', { method: 'DELETE',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({domain: $('hwDomain').value, wrong}) });
+  loadHotwords();
+}
+async function importHw() {
+  const text = $('hwBulk').value;
+  if (!text.trim()) { alert('请先粘贴内容'); return; }
+  const res = await fetch('/api/hotwords/import', { method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({domain: $('hwDomain').value, text}) });
+  if (!res.ok) { alert('导入失败：' + res.statusText); return; }
+  const r = await res.json();
+  alert(`✓ 新增 ${r.added} 条，更新 ${r.updated} 条`);
+  $('hwBulk').value = '';
+  loadHotwords();
+}
+function closeSettings() { $('settingsMask').classList.remove('show'); }
+async function saveSettings() {
+  const body = { llm_api_base: $('cfgBase').value, llm_model: $('cfgModel').value,
+                 domain: $('cfgDomain').value };
+  const k = $('cfgKey').value.trim();
+  if (k) body.llm_api_key = k;
+  await fetch('/api/settings', { method: 'POST',
+    headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  closeSettings(); checkLlm();
+}
+
+/* ---------- 校对学习 ---------- */
+(function initLearnDrop() {
+  const drop = () => $('learnDrop'), name = () => $('learnFileName'), input = () => $('learnFile');
+  const hover = on => {
+    drop().style.borderColor = on ? '#1a5cb0' : '#cdd5df';
+    drop().style.background = on ? '#f7faff' : '#fafbfc';
+  };
+  drop().addEventListener('dragover', e => { e.preventDefault(); hover(true); });
+  drop().addEventListener('dragleave', () => hover(false));
+  drop().addEventListener('drop', e => {
+    e.preventDefault(); hover(false);
+    if (e.dataTransfer.files.length) input().files = e.dataTransfer.files;
+    input().dispatchEvent(new Event('change'));
+  });
+  input().addEventListener('change', () => {
+    const f = input().files[0];
+    name().textContent = f ? `✓ ${f.name}` : '📄 点击选择文件，或拖拽到这里';
+    name().style.color = f ? '#1c7c46' : '#98a2b3';
+  });
+})();
+
+/* ---------- 校对学习 ---------- */
+let learnJobId = null;
+let learnCandidates = [];
+
+function openLearn(jobId) {
+  learnJobId = jobId;
+  $('learnJobName').textContent = '· ' + ((jobCache.get(jobId) || {}).filename || '');
+  $('learnStep1').style.display = 'block';
+  $('learnStep2').style.display = 'none';
+  $('learnFile').value = '';
+  $('learnFileName').textContent = '📄 点击选择文件，或拖拽到这里';
+  $('learnFileName').style.color = '#98a2b3';
+  $('learnMask').classList.add('show');
+}
+function closeLearn() { $('learnMask').classList.remove('show'); }
+
+async function startLearn() {
+  const f = $('learnFile').files[0];
+  if (!f) { alert('请先选择人工校对后的 .docx 或 .txt 文件'); return; }
+  const fd = new FormData();
+  fd.append('file', f);
+  fd.append('domain', $('learnDomain').value);
+  const btn = $('learnStep1').querySelector('.save');
+  btn.disabled = true; btn.textContent = '分析中...';
+  try {
+    const res = await fetch(`/api/jobs/${learnJobId}/learn`, { method: 'POST', body: fd });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || res.statusText);
+    }
+    const r = await res.json();
+    learnCandidates = r.candidates || [];
+    $('learnStep1').style.display = 'none';
+    $('learnStep2').style.display = 'block';
+    if (!learnCandidates.length) {
+      $('learnSummary').textContent = '没有发现可学习的修正规则（可能校对稿与原稿无差异，或差异都是语气词/标点）。';
+      $('candList').innerHTML = '';
+      $('confirmLearnBtn').style.display = 'none';
+      return;
+    }
+    const high = learnCandidates.filter(c => c.confidence === 'high').length;
+    const review = learnCandidates.length - high;
+    $('learnSummary').innerHTML =
+      `发现 <b>${learnCandidates.length}</b> 条候选规则（<b>${high}</b> 条多字词推荐采纳、` +
+      `${review} 条单字替换需人工判断）。保存后写入「${$('learnDomain').value}」热词表：`;
+    $('candList').innerHTML = learnCandidates.map((c, i) => {
+      const rec = c.confidence === 'high';
+      c._selected = rec;
+      return `
+      <label style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:9px;cursor:pointer;font-size:13px;${rec ? '' : 'opacity:.65'}">
+        <input type="checkbox" ${rec ? 'checked' : ''} onchange="toggleCand(${i}, this.checked)">
+        <span style="min-width:190px"><s style="color:#c0392b">${esc(c.wrong)}</s> → <b style="color:#1c7c46">${esc(c.right)}</b></span>
+        <span style="color:#98a2b3;font-size:12px">×${c.count}${rec ? '' : ' · 单字请确认'}</span>
+      </label>`;
+    }).join('');
+    $('confirmLearnBtn').style.display = '';
+  } catch (e) {
+    alert('分析失败：' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '开始对比分析';
+  }
+}
+
+function toggleCand(i, checked) { learnCandidates[i]._selected = checked; }
+
+async function confirmLearn() {
+  const picked = learnCandidates.filter(c => c._selected === true)
+                                .map(c => ({wrong: c.wrong, right: c.right}));
+  if (!picked.length) { alert('请至少勾选一条'); return; }
+  const res = await fetch('/api/hotwords/confirm', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({domain: $('learnDomain').value, candidates: picked})
+  });
+  if (!res.ok) { alert('保存失败：' + ((await res.json().catch(()=>({}))).detail || res.statusText)); return; }
+  const r = await res.json();
+  alert(`✓ 已保存 ${r.added} 条新规则到热词表。下次转写同领域录音时自动修正。`);
+  closeLearn();
+}
+
+/* ---------- 获取模型列表 ---------- */
+async function fetchModels() {
+  const note = $('modelFetchNote'), list = $('modelList');
+  const key = $('cfgKey').value.trim();  // 用刚输入的 key（可能还没保存）
+  note.textContent = '获取中...';
+  note.style.color = '#98a2b3';
+  try {
+    const res = await fetch('/api/llm/models', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({api_base: $('cfgBase').value.trim(),
+                            api_key: key || undefined})
+    });
+    const r = await res.json();
+    if (!res.ok) throw new Error(r.detail || res.statusText);
+    const models = r.models || [];
+    const chips = $('modelChips');
+    if (!models.length) {
+      chips.style.display = 'none';
+      note.textContent = '服务商未返回模型列表，请手动填写';
+      note.style.color = '#98a2b3';
+      return;
+    }
+    chips.style.display = 'flex';
+    chips.innerHTML = models.map(m =>
+      `<button type="button" onclick="$('cfgModel').value='${esc(m)}'"
+               style="padding:5px 12px;border:1px solid #d4e2f5;border-radius:16px;
+                      background:#fff;color:#1a5cb0;cursor:pointer;font-size:12px"
+               onmouseover="this.style.background='#f0f5ff'"
+               onmouseout="this.style.background='#fff'">${esc(m)}</button>`).join('');
+    note.textContent = `✓ 获取到 ${models.length} 个模型，点击即可选用：`;
+    note.style.color = '#1c7c46';
+  } catch (e) {
+    note.textContent = '获取失败：' + e.message;
+    note.style.color = '#c0392b';
+  }
+}
+
+/* ---------- 辅助 ---------- */
+async function checkLlm() {
+  const cfg = await (await fetch('/api/settings')).json();
+  const el = $('llmStatus');
+  if (cfg.llm_api_key_masked) {
+    el.textContent = '✓ 已配置';
+    el.classList.add('ok');
+  } else {
+    el.textContent = '未配置（点右上角设置）';
+    el.classList.remove('ok');
+  }
+}
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function fmtDur(min) { return min >= 60 ? `${Math.floor(min/60)}时${Math.round(min%60)}分` : `${min}分钟`; }
+
+checkLlm();
+refresh();
+</script>
+</body>
+</html>
