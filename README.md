@@ -1,113 +1,98 @@
 # 声文 ShengWen
 
-> 声音成文 —— 中文录音本地转写工具
+> 声音成文 —— 中文录音本地转写工具。把录音变成带说话人的 Word 文档，全程不联网。
 
-**100% 本地运行**的中文音视频转写 Web 应用，适用于会议、讲座、采访、播客等录音场景，内置可扩展的领域热词体系。
+**English**: ShengWen ("sound becomes text") — a 100% local Chinese speech-to-text web app for Mac. Recording in, speaker-labelled Word document out. Built on [MOSS-Transcribe-Diarize](https://github.com/OpenMOSS/MOSS-Transcribe-Diarize) with Apple MPS acceleration.
 
-## 特点
+<!-- TODO: 替换为真实截图
+![界面截图](docs/screenshot.png)
+-->
 
-- 🎯 **高准确率**：MOSS-Transcribe-Diarize（端到端转写+说话人分离），中文实测 CER 23%，专有名词原生识别（无需额外配置）
-- 👥 **自动说话人分离**：不需要指定人数，模型自动聚类
-- 📦 **0 联网**：转写全本地，模型权重 1.7GB 已内置；只有「AI 深度纠错」可选地用 DeepSeek
-- 📄 **多格式输出**：Word、txt、srt、json
-- 🔌 **双击启动**：Mac Finder 双击 `start.command` 即可
-- 🔄 **断点续传**：长音频分段处理，中断后重新提交自动跳过已完成部分
+| 录音转文字 | 说话人合并与命名 |
+|---|---|
+| ![上传](docs/screenshot-upload.png) | ![结果](docs/screenshot-result.png) |
 
-## 第一次安装
+*（截图占位：首次发布前补上真实界面图）*
+
+## 为什么做这个
+
+市面上的中文转写方案：云端服务（讯飞等）按小时收费且要上传录音；开源工具（Whisper 系）中文准确率不理想。**声文**用复旦开源的 MOSS-Transcribe-Diarize 模型，在 Mac 上本地跑出接近讯飞的中文准确率——录音永远不离开你的电脑。
+
+## 核心特性
+
+- 🎯 **中文高准确率**：实测字符错误率约 10.5%（以讯飞付费版人工校对稿为基准），专有名词原生识别，无需配置
+- 👥 **说话人分离**：模型端到端自动区分讲话人，界面支持手动合并与真名标注
+- 🔒 **100% 本地**：转写全程离线，隐私录音（会议/访谈/个人内容）不出本机
+- ⚡ **MPS GPU 加速**：Apple Silicon 上比 CPU 模式快约 4 倍，116 分钟录音约 25 分钟完成
+- 📄 **多格式导出**：Word（按说话人分段排版）/ txt / srt / json
+- 🔄 **断点续传**：长音频分段处理，中断后重跑自动跳过已完成部分
+- 📚 **热词体系 + 校对学习**：按领域维护修正词表；人工校对稿可自动提取「错误词→正确词」规则，越用越准
+- 🧩 **可选 AI 纠错**：接入 DeepSeek 等任意 OpenAI 兼容 API，进一步修正同音错字（可选，不影响主流程）
+
+## 实测效果
+
+以讯飞付费版（人工校对级）转写结果为基准，116 分钟真实会议录音：
+
+| 指标 | 声文（MOSS） | 备注 |
+|---|---|---|
+| 字符错误率 CER | **≈10.5%** | 讯飞稿为 0%（基准）|
+| 关键术语命中率 | **100%+** | 部分术语超过基准稿 |
+
+## 环境要求
+
+- **Apple Silicon Mac**（M1/M2/M3/M4），建议 ≥16GB 内存
+- macOS 12+
+- [FFmpeg](https://ffmpeg.org)（`brew install ffmpeg`）
+- 首次安装需能访问 GitHub 与 HuggingFace（或其镜像）
+
+## 快速开始
 
 ```bash
-./install.sh
+git clone https://github.com/yunfeng008/shengwen-transcribe.git
+cd shengwen-transcribe
+./install.sh       # 一键安装（约 10 分钟，含 1.7GB 模型下载，官方源失败自动切国内镜像）
+./start.command    # 双击启动，自动打开浏览器
 ```
 
-会做：
-1. 安装 uv（如果还没有）
-2. 创建 Python 3.12 虚拟环境
-3. 安装依赖
-4. 下载 MOSS 模型（约 1.7GB，需访问 huggingface.co）
-
-## 启动
-
-```bash
-# 方式 1：双击
-open start.command
-
-# 方式 2：终端启动
-./start.command
-```
-
-自动打开浏览器 `http://127.0.0.1:8765`。
+然后拖入录音文件即可。也可以从 Releases 单独下载模型权重包，解压到 `models/` 目录。
 
 ## AI 深度纠错（可选）
 
-设置页里填 DeepSeek API key（其他 OpenAI 兼容服务也行，如 GLM/通义）：
+在设置页填入任意 OpenAI 兼容服务的 API Key（DeepSeek / 智谱 / 通义 / Kimi 等），转写完成后可一键调用大模型修正同音错字与术语。不配置也完全可用。
 
-- API 地址：`https://api.deepseek.com`
-- 模型名：`deepseek-chat`
-
-不填也能正常转写，只是少了最后一步的 LLM 文字校对。
-
-## 卸载
-
-```bash
-rm -rf transcribe-app
-```
-
-彻底干净，模型、venv、数据全部带走。
-
-## 目录结构
+## 工作原理
 
 ```
-transcribe-app/
-├── start.command         # 双击启动
-├── install.sh            # 首次安装
-├── README.md             # 本文件
-├── .venv/                # Python 3.12 虚拟环境
-├── models/hf_cache/      # MOSS 模型权重（1.7GB）
-├── vendor/               # MOSS-Transcribe-Diarize 源码
-├── server/               # 后端
-│   ├── app.py            # Web 服务入口
-│   ├── jobs.py           # 任务队列
-│   ├── pipeline.py       # 转写流水线
-│   ├── moss_engine.py    # MOSS 推理封装
-│   ├── segmenter.py      # 分段 + 说话人对齐
-│   └── polish.py         # 可选 LLM 纠错
-├── web/index.html        # 前端单页
-└── runs/                 # 任务数据
-    ├── <job_id>/         # 每个任务的目录（上传文件、结果、状态）
-    └── config.json       # LLM 设置（api key 等）
+录音 → FFmpeg 16kHz wav → 分段（10 分钟/段 + 30 秒重叠）
+  → MOSS 逐段推理（转写 + 段内说话人分离）
+  → 跨段说话人对齐 → 热词替换 → 文本顺滑
+  → [可选] LLM 深度纠错 → Word / txt / srt / json
 ```
 
-## 性能参考（M1 Max，MPS GPU 加速）
+每段完成即写盘（断点续传）；模型单例常驻（后续任务免加载）。
 
-| 音频时长 | 处理时间 |
+## 性能参考（M1 Max）
+
+| 录音时长 | 处理时间 |
 |---|---|
-| 5 分钟 | ~1 分钟 |
 | 30 分钟 | ~6 分钟 |
-| 116 分钟 | **~25 分钟**（MPS 加速后，此前 CPU 模式需 4 小时）|
+| 2 小时 | ~25 分钟 |
 
-长音频自动后台异步处理，进度实时刷新在 Web 界面（段内也有百分比进度）。
+## 常见问题
 
-## 技术细节
+**支持 Windows / Intel Mac 吗？**
+不支持。MPS 加速和运行环境均绑定 Apple Silicon；理论上可改造为纯 CPU 跨平台，但未测试。
 
-### 流水线
+**说话人编号比实际人数多？**
+长录音跨段说话人编号会过度切分，这是当前端到端方案的限制。界面提供手动合并与真名标注，通常几分钟即可整理完毕。
 
-```
-上传(任意格式) → ffmpeg 16k wav
-  → 时长 ≤ 12min：整段 MOSS 推理
-  → 时长 > 12min：每段 10min + 30s 重叠
-      → 逐段推理（模型只加载一次）
-      → 重叠区说话人对齐
-  → 输出：txt + srt + docx + json
-  → [可选] LLM 纠错
-```
+**识别错了怎么改？**
+两条路：① 设置页「热词表管理」添加「错误词=>正确词」规则；② 在 Word 里校对完后，通过任务的「校对学习」功能传回，系统自动提取修正规则。
 
-### 跨段说话人对齐
+**和讯飞比差距多大？**
+文字准确率已非常接近（关键术语 100%+ 追平）；说话人分离的自动化程度有差距，需要少量手动合并。换来的是零费用与完全隐私。
 
-MOSS 在每段内部独立输出 S01/S02 标签，段间编号不对应。本产品用「重叠区文本相似度」建立映射，链式传递成全局 S01..SN。
-
-### 断点续传
-
-每段完成即写 `runs/<job_id>/progress.json`，重启后自动跳过。重新提交同一录音的同一断点会被复用。
+更多技术细节见 [PRODUCT.md](PRODUCT.md)。
 
 ## License
 
@@ -117,3 +102,9 @@ MOSS 在每段内部独立输出 S01/S02 标签，段间编号不对应。本产
 - [MOSS-Transcribe-Diarize](https://github.com/OpenMOSS/MOSS-Transcribe-Diarize)（转写引擎）：Apache-2.0
 - [Whisper-Medium](https://github.com/openai/whisper)（编码器）：MIT
 - [Qwen3-0.6B](https://huggingface.co/Qwen/Qwen3-0.6B)（解码器）：Apache-2.0
+
+## 致谢
+
+- [OpenMOSS](https://github.com/OpenMOSS) — MOSS-Transcribe-Diarize 模型
+- [ModelScope / 魔搭社区](https://modelscope.cn) — 模型分发
+- [Apple ML](https://developer.apple.com/machine-learning/) — MPS 推理加速
