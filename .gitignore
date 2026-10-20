@@ -14,3 +14,4 @@ vendor/
 __pycache__/
 *.pyc
 assets/hotwords_religion.txt
+docs/
