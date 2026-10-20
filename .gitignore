@@ -1,0 +1,15 @@
+# ===== 用户数据（转写内容、个人热词、配置——绝不入库）=====
+runs/
+
+# ===== 大文件（模型、环境——用 install.sh 重建或 Release 下载）=====
+models/
+.venv/
+
+# ===== 上游代码（clone 后由 install.sh 获取）=====
+vendor/
+
+# ===== 本地配置与日志 =====
+*.log
+.DS_Store
+__pycache__/
+*.pyc

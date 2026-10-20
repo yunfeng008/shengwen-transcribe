@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#1a5cb0"/>
+  <!-- 左声波 -->
+  <path d="M13 22 q-5 10 1 20" stroke="#8fc1f5" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <!-- 右声波 -->
+  <path d="M51 22 q5 10 -1 20" stroke="#8fc1f5" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <!-- 麦克风头 -->
+  <rect x="25" y="11" width="14" height="24" rx="7" fill="#fff"/>
+  <!-- 麦克风支架 -->
+  <path d="M18 28 c0 10 6 15 14 15 s14 -5 14 -15" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <line x1="32" y1="43" x2="32" y2="51" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+  <line x1="24" y1="51" x2="40" y2="51" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+</svg>
