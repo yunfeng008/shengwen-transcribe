@@ -4,15 +4,9 @@
 
 **English**: ShengWen ("sound becomes text") — a 100% local Chinese speech-to-text web app for Mac. Recording in, speaker-labelled Word document out. Built on [MOSS-Transcribe-Diarize](https://github.com/OpenMOSS/MOSS-Transcribe-Diarize) with Apple MPS acceleration.
 
-<!-- TODO: 替换为真实截图
-![界面截图](docs/screenshot.png)
--->
-
-| 录音转文字 | 说话人合并与命名 |
+| 上传界面：拖入录音即可 | 校对：说话人合并与真名命名 |
 |---|---|
-| ![上传](docs/screenshot-upload.png) | ![结果](docs/screenshot-result.png) |
-
-*（截图占位：首次发布前补上真实界面图）*
+| ![上传界面](docs/screenshot-upload.png) | ![合并说话人](docs/screenshot-merge.png) |
 
 ## 为什么做这个
 
