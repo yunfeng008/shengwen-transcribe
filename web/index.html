@@ -218,21 +218,32 @@
 
 <!-- 合并说话人弹层 -->
 <div class="mask" id="mergeMask">
-  <div class="dialog" style="width:560px">
-    <h3>👥 合并说话人 <span id="mergeJobName" style="font-size:12px;color:#98a2b3;font-weight:400"></span></h3>
-    <div class="merge-tip">勾选同一个人的多个编号（至少 2 个）→ 选择保留的编号 → 合并。合并后 Word / txt 会立即重新生成。</div>
-    <div id="speakerList" style="max-height:300px;overflow-y:auto;margin-bottom:14px"></div>
-    <div class="field" style="display:none" id="keepRow">
-      <label>保留编号（其他编号的发言都归到它）</label>
-      <select id="keepSelect" style="width:100%;padding:9px 12px;border:1px solid #d0d5dd;border-radius:9px;font-size:13px"></select>
+  <div class="dialog" style="width:560px;position:relative">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <h3 style="margin:0;white-space:nowrap">👥 合并说话人</h3>
+      <button onclick="closeMerge()"
+              style="width:30px;height:30px;border:none;border-radius:8px;background:#f2f4f7;
+                     color:#667085;font-size:16px;cursor:pointer;line-height:1;flex-shrink:0"
+              onmouseover="this.style.background='#e4e7ec'"
+              onmouseout="this.style.background='#f2f4f7'">×</button>
     </div>
-    <div class="field" style="display:none" id="nameRow">
-      <label>命名为（可选，输入真名后 Word 里直接显示名字）</label>
-      <input type="text" id="nameInput" placeholder="如：张三" style="width:100%;padding:9px 12px;border:1px solid #d0d5dd;border-radius:9px;font-size:13px">
+    <div id="mergeJobName" style="font-size:12px;color:#98a2b3;margin-bottom:10px"></div>
+    <div class="merge-tip">勾选同一个人的多个编号 → 选保留编号（可命名）→ 合并。合并后 Word / txt 立即重新生成。</div>
+    <div id="speakerList" style="max-height:280px;overflow-y:auto;border:1px solid #eef1f5;
+         border-radius:10px;padding:4px 0;margin-bottom:12px"></div>
+    <div id="mergeOps" style="display:none">
+      <div class="field">
+        <label>合并到</label>
+        <select id="keepSelect" style="width:100%;padding:9px 12px;border:1px solid #d0d5dd;border-radius:9px;font-size:13px"></select>
+      </div>
+      <div class="field">
+        <label>命名为（可选，输入真名后 Word 里直接显示名字）</label>
+        <input type="text" id="nameInput" placeholder="如：张三" style="width:100%;padding:9px 12px;border:1px solid #d0d5dd;border-radius:9px;font-size:13px">
+      </div>
     </div>
     <div class="btns">
-      <button class="cancel" onclick="closeMerge()">关闭</button>
-      <button class="save" id="mergeBtn" onclick="doMerge()" disabled style="background:#1c7c46;opacity:.4">合并</button>
+      <button class="cancel" onclick="closeMerge()">取消</button>
+      <button class="save" id="mergeBtn" onclick="doMerge()" disabled style="background:#1c7c46;opacity:.4">合并所选</button>
     </div>
   </div>
 </div>
@@ -468,41 +479,57 @@ async function openMerge(jobId) {
   $('mergeJobName').textContent = '· ' + ((jobCache.get(jobId) || {}).filename || '');
   const data = await (await fetch(`/api/jobs/${jobId}/speakers`)).json();
   const list = $('speakerList');
-  list.innerHTML = data.speakers.map(s => `
-    <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;cursor:pointer;font-size:13px">
-      <input type="checkbox" onchange="toggleSpk(${s.id}, this.checked)">
-      <b style="min-width:80px">讲话人${s.id}${s.name ? '（' + esc(s.name) + '）' : ''}</b>
-      <span style="color:#98a2b3;font-size:12px">${s.n_sent} 句 / ${s.n_chars} 字</span>
-    </label>`).join('');
-  $('keepRow').style.display = 'none';
-  $('nameRow').style.display = 'none';
+  currentSpeakers = data.speakers;
+  list.innerHTML = data.speakers.map(s => {
+    const shown = s.name ? esc(s.name) : `讲话人${s.id}`;
+    return `
+    <label style="display:flex;align-items:center;padding:9px 12px;cursor:pointer;font-size:13px;
+                  border-bottom:1px solid #f5f6f8"
+           onmouseover="this.style.background='#f7f9fc'" onmouseout="this.style.background=''">
+      <input type="checkbox" style="width:15px;height:15px;margin:0 12px 0 2px;flex-shrink:0"
+             onchange="toggleSpk(${s.id}, this.checked)">
+      <span style="flex:1;font-weight:500;color:#1d2939">${shown}</span>
+      <span style="color:#98a2b3;font-size:12px;white-space:nowrap">${s.n_sent} 句 · ${s.n_chars} 字</span>
+    </label>`;}).join('');
+  $('mergeOps').style.display = 'none';
   $('nameInput').value = '';
   const btn = $('mergeBtn');
-  btn.disabled = true; btn.style.opacity = .4;
+  btn.disabled = true; btn.style.opacity = .4; btn.textContent = '合并所选';
   $('mergeMask').classList.add('show');
 }
 function closeMerge() { $('mergeMask').classList.remove('show'); }
 
-function toggleSpk(id, checked) {
-  if (checked) mergeSelection.add(id); else mergeSelection.delete(id);
-  const keepRow = $('keepRow'), nameRow = $('nameRow'), btn = $('mergeBtn');
-  if (mergeSelection.size >= 1) {
-    if (mergeSelection.size >= 2) {
+let currentSpeakers = [];
+
+function spkLabel(id) {
+  const s = currentSpeakers.find(x => x.id === id);
+  return s && s.name ? s.name : '讲话人' + id;
+}
+
+function refreshMergeOps() {
+  const n = mergeSelection.size;
+  const ops = $('mergeOps'), btn = $('mergeBtn');
+  if (n >= 1) {
+    if (n >= 2) {
       $('keepSelect').innerHTML = [...mergeSelection].map(id =>
-        `<option value="${id}">讲话人${id}</option>`).join('');
-      keepRow.style.display = 'block';
-      btn.textContent = '合并';
+        `<option value="${id}">${spkLabel(id)}</option>`).join('');
+      $('keepSelect').parentElement.style.display = 'block';
+      btn.textContent = '合并所选';
     } else {
-      keepRow.style.display = 'none';
+      $('keepSelect').parentElement.style.display = 'none';
       btn.textContent = '保存命名';
     }
-    nameRow.style.display = 'block';
+    ops.style.display = 'block';
     btn.disabled = false; btn.style.opacity = 1;
   } else {
-    keepRow.style.display = 'none';
-    nameRow.style.display = 'none';
+    ops.style.display = 'none';
     btn.disabled = true; btn.style.opacity = .4;
   }
+}
+
+function toggleSpk(id, checked) {
+  if (checked) mergeSelection.add(id); else mergeSelection.delete(id);
+  refreshMergeOps();
 }
 
 async function doMerge() {
@@ -511,12 +538,13 @@ async function doMerge() {
   let body;
   if (targets.length >= 2) {
     const keep = parseInt($('keepSelect').value);
-    const others = targets.filter(t => t !== keep).map(t => '讲话人' + t).join('、');
-    if (!confirm(`把 ${others} 合并到 讲话人${keep}${name ? '，并命名为「' + name + '」' : ''}？合并后 Word/txt 立即重新生成。`)) return;
+    if (!keep) { alert('请选择要合并到的编号'); return; }
+    const others = targets.filter(t => t !== keep).map(spkLabel).join('、');
+    if (!confirm(`把 ${others} 合并到「${spkLabel(keep)}」${name ? '，命名为「' + name + '」' : ''}？\n合并后 Word/txt 立即重新生成。`)) return;
     body = {targets, keep, name: name || undefined};
   } else {
-    if (!name) { alert('请输入名字，或勾选 2 个以上编号进行合并'); return; }
-    if (!confirm(`把 讲话人${targets[0]} 命名为「${name}」？`)) return;
+    if (!name) { alert('请输入名字，或勾选编号后命名'); return; }
+    if (!confirm(`把「${spkLabel(targets[0])}」命名为「${name}」？`)) return;
     body = {targets, keep: targets[0], name};
   }
   const res = await fetch(`/api/jobs/${mergeJobId}/merge`, {
