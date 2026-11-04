@@ -16,13 +16,11 @@ import tempfile
 from difflib import SequenceMatcher
 from pathlib import Path
 
+import ffbin
+
 
 def get_duration(wav_path):
-    out = subprocess.check_output([
-        "ffprobe", "-v", "error", "-show_entries", "format=duration",
-        "-of", "default=noprint_wrappers=1:nokey=1", str(wav_path),
-    ]).decode().strip()
-    return float(out)
+    return ffbin.get_duration(wav_path)
 
 
 def plan_segments(duration, segment_sec=600, overlap_sec=30):
@@ -49,7 +47,7 @@ def cut_segment(wav_path, start, end, out_path):
     """ffmpeg 按 [start, end) 切一段 wav。"""
     dur = end - start
     subprocess.run([
-        "ffmpeg", "-y", "-loglevel", "error",
+        ffbin.ffmpeg(), "-y", "-loglevel", "error",
         "-ss", f"{start:.3f}", "-t", f"{dur:.3f}",
         "-i", str(wav_path),
         "-ac", "1", "-ar", "16000", "-f", "wav", str(out_path),

@@ -51,8 +51,8 @@
 
 - **Apple Silicon Mac**（M1/M2/M3/M4），建议 ≥16GB 内存
 - macOS 12+
-- [FFmpeg](https://ffmpeg.org)（`brew install ffmpeg`）
-- 首次安装需能访问 GitHub 与 HuggingFace（或其镜像）
+- FFmpeg 可选：未安装时会随依赖自动装内置静态版，**无需 brew**
+- **不需要科学上网**：模型下载官方源失败自动切国内镜像（hf-mirror.com），pip 依赖失败自动切清华源
 
 ## 快速开始
 
@@ -101,6 +101,9 @@ cd shengwen-transcribe
 | 2 小时 | ~25 分钟 |
 
 ## 常见问题
+
+**国内网络安装要注意什么？**
+不需要科学上网。模型下载官方源失败自动切 hf-mirror.com 镜像；pip 依赖失败自动切清华镜像；ffmpeg 没装也不影响（随依赖自动装内置静态版，无需 brew）。唯一可能慢的是 GitHub 下载 zip 本身，很慢就换个时段重试。
 
 **支持 Windows / Intel Mac 吗？**
 不支持。MPS 加速和运行环境均绑定 Apple Silicon；理论上可改造为纯 CPU 跨平台，但未测试。

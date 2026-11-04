@@ -15,6 +15,7 @@ from pathlib import Path
 from segmenter import (plan_segments, cut_segment, align_and_merge,
                        SegmentCheckpoint, get_duration)
 from moss_engine import MossEngine
+import ffbin
 
 # 短音频阈值：不超过就直接整段推理
 SINGLE_PASS_MAX_SEC = 720  # 12 分钟
@@ -24,7 +25,7 @@ OVERLAP_SEC = 30           # 段间重叠
 
 def to_wav16k(src, dst):
     subprocess.run([
-        "ffmpeg", "-y", "-loglevel", "error",
+        ffbin.ffmpeg(), "-y", "-loglevel", "error",
         "-i", str(src), "-vn", "-ac", "1", "-ar", "16000", "-f", "wav", str(dst),
     ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 

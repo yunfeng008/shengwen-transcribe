@@ -14,13 +14,12 @@ echo "  声文 ShengWen · 一键安装"
 echo "==========================================="
 echo ""
 
-# 0. 前置检查：ffmpeg（必需）；git 仅在需要拉取引擎代码时才要求（zip 发行包自带 vendor）
-if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
-    echo "❌ 未找到 ffmpeg/ffprobe，请先安装后重跑本脚本："
-    echo "   brew install ffmpeg"
-    exit 1
+# 0. 前置检查：ffmpeg 可选（无系统版本时随依赖装内置静态版）；git 仅在需要拉取引擎代码时才要求（zip 发行包自带 vendor）
+if command -v ffmpeg >/dev/null 2>&1; then
+    echo "✓ ffmpeg $(ffmpeg -version 2>/dev/null | head -1 | awk '{print $3}')"
+else
+    echo "ℹ️  未检测到系统 ffmpeg，将随依赖安装内置静态版（无需 brew）"
 fi
-echo "✓ ffmpeg $(ffmpeg -version 2>/dev/null | head -1 | awk '{print $3}')"
 
 # 1. uv（Python 环境管理器）
 if ! command -v uv >/dev/null 2>&1; then
@@ -52,14 +51,16 @@ if [ ! -d "vendor/MOSS-Transcribe-Diarize" ]; then
 fi
 echo "✓ 引擎代码就绪"
 
-# 3. venv + 依赖
+# 3. venv + 依赖（PyPI 官方源失败自动切清华镜像）
 if [ ! -x ".venv/bin/python" ]; then
     echo "[3/4] 创建 Python 3.12 venv..."
     $UV venv --python 3.12 .venv
 fi
-$UV pip install -p .venv/bin/python -q \
-    "vendor/MOSS-Transcribe-Diarize/[torch-runtime]" \
-    python-docx fastapi uvicorn python-multipart huggingface_hub 2>&1 | tail -2
+DEPS=("vendor/MOSS-Transcribe-Diarize/[torch-runtime]" python-docx fastapi uvicorn python-multipart huggingface_hub imageio-ffmpeg)
+if ! $UV pip install -p .venv/bin/python -q "${DEPS[@]}" 2>&1 | tail -2; then
+    echo "   PyPI 官方源不可达，切换清华镜像..."
+    $UV pip install -p .venv/bin/python -q --index-url https://pypi.tuna.tsinghua.edu.cn/simple "${DEPS[@]}" 2>&1 | tail -2
+fi
 echo "✓ 依赖已装（$($UV pip list -p .venv/bin/python 2>/dev/null | grep -vcE 'Package|----') 个包）"
 
 # 4. 模型（官方源失败自动切国内镜像 hf-mirror.com）

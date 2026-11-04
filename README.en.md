@@ -58,8 +58,8 @@ Measured on a 116-minute real meeting recording, using a paid cloud transcript (
 
 - **Apple Silicon Mac** (M1/M2/M3/M4), 16 GB+ memory recommended
 - macOS 12+
-- [FFmpeg](https://ffmpeg.org) (`brew install ffmpeg`)
-- Internet access on first install (GitHub + HuggingFace, or their mirrors)
+- FFmpeg optional: if not installed, a static build ships with the dependencies — no brew needed
+- No VPN required: model downloads fall back to the hf-mirror.com mirror automatically, and pip installs fall back to a China mirror
 
 ## Quick start
 
