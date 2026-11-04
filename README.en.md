@@ -23,13 +23,16 @@ The existing options for Chinese transcription:
 
 ## How it compares
 
-| | Cloud transcription | Whisper-based tools | ShengWen |
+| | ShengWen | MacWhisper | Cloud transcription (iFlytek FeiZhi, etc.) |
 |---|---|---|---|
-| Cost | Billed by minute/hour | Free | Free |
-| Where recordings go | Vendor's server | Your machine | Your machine |
-| Chinese accuracy | High | Frequent homophone errors | **CER ≈ 10.5%** (vs. proofread paid transcript) |
-| Speaker diarization | Yes | Often needs extra components | End-to-end, built in |
-| Platform | Any (browser) | Any | Apple Silicon Mac |
+| Cost | Free, open source (MIT) | Free tier + paid Pro | Billed by minute/hour |
+| Where recordings go | Your machine | Your machine | Vendor's server |
+| Chinese accuracy | **CER ≈ 10.5%** (vs. proofread transcript) | Whisper-based (not independently tested) | High |
+| Speaker diarization | End-to-end, built in + manual merge | Yes (beta) | Yes |
+| Usage | Drop files in a browser | Drag in / record in app | Upload to web/app |
+| Platform | Apple Silicon Mac | Apple Silicon Mac | Any (online) |
+
+> The MacWhisper column reflects publicly available product information; we have not benchmarked it ourselves.
 
 ## Benchmarks
 
@@ -77,6 +80,10 @@ cd shengwen-transcribe
 
 A standalone model package (`shengwen-models-v*.tar.gz`) is also available on Releases if you prefer to skip the download step.
 
+> **Blocked on first launch?** If macOS says the app "cannot be verified" when you double-click `install.command` / `start.command`, the file isn't broken — it's Gatekeeper blocking unsigned apps. Right-click the file → **Open** → **Open** again; or open **System Settings → Privacy & Security** and click **Open Anyway**.
+
+Want a quick sanity check after installing? Grab this [30-second sample audio](docs/sample-audio.mp3) (a synthetic meeting intro generated with macOS TTS, no private content) and drop it in; the [sample transcript](docs/sample-transcript.docx) is its actual output.
+
 ## AI polish (optional)
 
 Enter any OpenAI-compatible API key in Settings (DeepSeek / GLM / Kimi etc.). After transcription, one click fixes homophone errors and terminology. Fully optional — everything works without it.
@@ -114,6 +121,12 @@ Two ways: ① add a `wrong=>right` rule in Settings → Hotwords; ② proofread 
 Text accuracy is nearly on par (key terms 100%+). Speaker separation needs a small amount of manual merging. In exchange: zero cost and complete privacy.
 
 See [PRODUCT.md](PRODUCT.md) for technical details (Chinese).
+
+## Roadmap
+
+- Windows / CPU-only cross-platform: under evaluation
+- Live recording, post-meeting AI summary & action items: gathering requirements — issues welcome
+- Maintained as a personal project driven by real usage; no timeline promises
 
 ## License
 
