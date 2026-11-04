@@ -2,7 +2,11 @@
 
 > 声音成文 —— 中文录音本地转写工具。把录音变成带说话人的 Word 文档，全程不联网。
 
+简体中文 | [English](README.en.md)
+
 **English**: ShengWen ("sound becomes text") — a 100% local Chinese speech-to-text web app for Mac. Recording in, speaker-labelled Word document out. Built on [MOSS-Transcribe-Diarize](https://github.com/OpenMOSS/MOSS-Transcribe-Diarize) with Apple MPS acceleration.
+
+![演示：拖入录音 → 选择领域 → 转写 → 整理说话人](docs/demo.gif)
 
 | 上传界面：拖入录音即可 | 校对：说话人合并与真名命名 |
 |---|---|
@@ -11,6 +15,14 @@
 ## 为什么做这个
 
 市面上的中文转写方案：云端服务（讯飞等）按小时收费且要上传录音；开源工具（Whisper 系）中文准确率不理想。**声文**用复旦开源的 MOSS-Transcribe-Diarize 模型，在 Mac 上本地跑出接近讯飞的中文准确率——录音永远不离开你的电脑。
+
+| | 云端转写服务 | Whisper 系工具 | 声文 |
+|---|---|---|---|
+| 费用 | 按分钟/小时计费 | 免费 | 免费 |
+| 录音去向 | 上传厂商服务器 | 本机 | 本机 |
+| 中文准确率 | 高 | 同音错字多 | **CER ≈ 10.5%**（实测 vs 人工校对稿） |
+| 说话人分离 | 支持 | 多需额外组件 | 端到端内置 |
+| 平台 | 全平台（浏览器） | 全平台 | Apple Silicon Mac |
 
 ## 核心特性
 

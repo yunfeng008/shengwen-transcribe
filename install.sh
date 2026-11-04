@@ -14,18 +14,13 @@ echo "  声文 ShengWen · 一键安装"
 echo "==========================================="
 echo ""
 
-# 0. 前置检查：ffmpeg + git
+# 0. 前置检查：ffmpeg（必需）；git 仅在需要拉取引擎代码时才要求（zip 发行包自带 vendor）
 if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
     echo "❌ 未找到 ffmpeg/ffprobe，请先安装后重跑本脚本："
     echo "   brew install ffmpeg"
     exit 1
 fi
 echo "✓ ffmpeg $(ffmpeg -version 2>/dev/null | head -1 | awk '{print $3}')"
-
-if ! command -v git >/dev/null 2>&1; then
-    echo "❌ 未找到 git（xcode-select --install 可安装），安装后重跑本脚本。"
-    exit 1
-fi
 
 # 1. uv（Python 环境管理器）
 if ! command -v uv >/dev/null 2>&1; then
@@ -40,8 +35,13 @@ fi
 UV=$(command -v uv || echo "$HOME/.local/bin/uv")
 echo "✓ uv: $($UV --version)"
 
-# 2. 上游推理代码（vendor）
+# 2. 上游推理代码（vendor；zip 发行包已自带，无需 git）
 if [ ! -d "vendor/MOSS-Transcribe-Diarize" ]; then
+    if ! command -v git >/dev/null 2>&1; then
+        echo "❌ 未找到 vendor/ 引擎代码，且系统无 git 无法自动获取。"
+        echo "   请安装 git（xcode-select --install）后重跑，或下载完整 zip 发行包。"
+        exit 1
+    fi
     echo "[2/4] 获取转写引擎代码..."
     mkdir -p vendor
     if ! git clone --depth 1 "$REPO_VENDOR" vendor/MOSS-Transcribe-Diarize 2>/dev/null; then
