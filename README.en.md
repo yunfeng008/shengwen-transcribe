@@ -27,7 +27,7 @@ The existing options for Chinese transcription:
 |---|---|---|---|
 | Cost | Free, open source (MIT) | Free tier + paid Pro | Billed by minute/hour |
 | Where recordings go | Your machine | Your machine | Vendor's server |
-| Chinese accuracy | **CER ≈ 10.5%** (vs. proofread transcript) | Whisper-based (not independently tested) | High |
+| Chinese accuracy | **CER ≈ 10.5%** (vs. proofread transcript) | Whisper-based (not independently tested) | Reference transcript (CER 0%) |
 | Speaker diarization | End-to-end, built in + manual merge | Yes (beta) | Yes |
 | Usage | Drop files in a browser | Drag in / record in app | Upload to web/app |
 | Platform | Apple Silicon Mac | Apple Silicon Mac | Any (online) |
@@ -82,7 +82,7 @@ A standalone model package (`shengwen-models-v*.tar.gz`) is also available on Re
 
 > **Blocked on first launch?** If macOS says the app "cannot be verified" when you double-click `install.command` / `start.command`, the file isn't broken — it's Gatekeeper blocking unsigned apps. Right-click the file → **Open** → **Open** again; or open **System Settings → Privacy & Security** and click **Open Anyway**.
 
-Want a quick sanity check after installing? Grab this [30-second sample audio](docs/sample-audio.mp3) (a synthetic meeting intro generated with macOS TTS, no private content) and drop it in; the [sample transcript](docs/sample-transcript.docx) is its actual output.
+Want a quick sanity check after installing? Grab this [30-second sample audio](docs/sample-audio.mp3) (a synthetic meeting intro generated with macOS TTS, no private content) and drop it in; the [sample transcript](docs/sample-transcript.docx) is its actual output. Synthetic speech is acoustically cleaner than real meetings — for real-world accuracy, refer to the 116-minute benchmark above (CER ≈ 10.5%).
 
 ## AI polish (optional)
 

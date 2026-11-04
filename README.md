@@ -20,7 +20,7 @@
 |---|---|---|---|
 | 费用 | 免费开源 MIT | 免费档 + Pro 付费 | 按分钟/小时计费 |
 | 录音去向 | 本机，不出电脑 | 本机 | 上传厂商服务器 |
-| 中文准确率 | 实测 CER ≈10.5%（人工校对稿基准） | 基于 Whisper 系模型（未实测） | 高 |
+| 中文准确率 | 实测 CER ≈10.5%（人工校对稿基准） | 基于 Whisper 系模型（未实测） | 基准稿（CER 0%） |
 | 说话人分离 | 端到端内置 + 手动合并/真名 | 支持（beta） | 支持 |
 | 使用方式 | 浏览器拖入文件 | App 内拖入/录音 | 上传到网页/App |
 | 平台 | Apple Silicon Mac | Apple Silicon Mac | 全平台（需联网） |
@@ -56,6 +56,15 @@
 
 ## 快速开始
 
+**方式一：zip 包（免 git，推荐新手）**
+
+1. 从 [Releases](https://github.com/yunfeng008/shengwen-transcribe/releases) 下载 `shengwen-transcribe-v*.zip`
+2. 解压（Finder 双击即可），打开文件夹
+3. 双击 `install.command` 安装（约 10 分钟，含 1.7GB 模型下载，官方源失败自动切国内镜像）
+4. 双击 `start.command` 启动，自动打开浏览器
+
+**方式二：git**
+
 ```bash
 git clone https://github.com/yunfeng008/shengwen-transcribe.git
 cd shengwen-transcribe
@@ -67,7 +76,7 @@ cd shengwen-transcribe
 
 > **双击被拦？** 首次双击 `install.command` / `start.command` 若提示「无法验证开发者」，不是文件损坏——这是 macOS 对未签名应用的常规拦截：在文件上**右键 → 打开 → 再点打开**；或打开 **系统设置 → 隐私与安全性**，点「仍要打开」。
 
-装好后想快速验证？下载这份 [30 秒样例音频](docs/sample-audio.mp3)（macOS 合成语音生成的会议开场白，无隐私内容），拖进页面转写；对应的 [转写样例 Word](docs/sample-transcript.docx) 就是它的输出效果。
+装好后想快速验证？下载这份 [30 秒样例音频](docs/sample-audio.mp3)（macOS 合成语音生成的会议开场白，无隐私内容），拖进页面转写；对应的 [转写样例 Word](docs/sample-transcript.docx) 就是它的输出效果。合成语音音质比真实会议干净，实际转写效果以 116 分钟真实录音的实测（CER ≈10.5%）为准。
 
 ## AI 深度纠错（可选）
 
