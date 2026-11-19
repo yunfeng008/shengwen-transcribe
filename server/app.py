@@ -78,7 +78,9 @@ async def create_job(
 
 @app.get("/api/jobs")
 def list_jobs():
-    return [j.to_dict() for j in manager.list()]
+    jobs = [j.to_dict() for j in manager.list()]
+    jobs.sort(key=lambda j: j.get("created") or 0, reverse=True)
+    return jobs
 
 
 @app.get("/api/jobs/{job_id}")

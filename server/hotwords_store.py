@@ -156,31 +156,28 @@ def extract_replacements(orig_sentences, corrected_file):
     else:
         lines = _txt_to_lines(corrected_file)
 
-    # 校对文件行 -> 纯内容（剥掉「讲话人N [时间]」前缀）
+    # 校对文件行 -> 纯内容（剥掉「讲话人N [时间]」/「真名 [时间]」前缀）
     corrected_contents = [_LABEL_RE.sub("", l).strip() for l in lines]
     corrected_contents = [c for c in corrected_contents if c]
 
     orig_texts = [s["text"] for s in orig_sentences]
 
-    # 对齐：校对文件的内容行与原句，按顺序用相似度贪心对齐
-    # （人工校对通常不增删句子，只改字词；顺序基本一致）
-    pairs_counter = Counter()
-    si = 0  # 原句游标
-    for c in corrected_contents:
-        # 在原句窗口内找最佳匹配
-        best_j, best_sim = None, 0.0
-        for j in range(si, min(si + 12, len(orig_texts))):
-            sim = SequenceMatcher(None, orig_texts[j], c).ratio()
-            if sim > best_sim:
-                best_j, best_sim = j, sim
-        if best_j is None or best_sim < 0.5:
-            continue  # 对不上（可能是新增内容），跳过
-        orig_t, corr_t = orig_texts[best_j], c
-        si = best_j + 1
+    # 字符流对齐：两边各自拼接成纯文本流后整体 diff。
+    # 旧版逐句贪心对齐在「docx 按说话人合段 vs result.json 逐句」粒度错配、
+    # 或人工删句/合并段落时错位雪崩（实测 330 行仅 6 行匹配、候选归零）。
+    # 字符流对齐对改名、删句、合并段、增删字词全部天然免疫；
+    # 删除/插入产生 delete/insert opcode（不产出替换对），只有 replace 是候选。
+    orig_stream = "".join(orig_texts)
+    corr_stream = "".join(corrected_contents)
 
-        # 同句：提取词级替换对
-        for wrong, right in _diff_pairs(orig_t, corr_t):
-            pairs_counter[(wrong, right)] += 1
+    pairs_counter = Counter()
+    sm = SequenceMatcher(None, orig_stream, corr_stream, autojunk=False)
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        if tag != "replace":
+            continue
+        wrong, right = orig_stream[i1:i2], corr_stream[j1:j2]
+        for w, r in _diff_pairs(orig_stream, corr_stream, i1, i2, j1, j2):
+            pairs_counter[(w, r)] += 1
 
     candidates = []
     for (w, r), n in pairs_counter.most_common():
@@ -190,19 +187,22 @@ def extract_replacements(orig_sentences, corrected_file):
     return candidates
 
 
-def _diff_pairs(orig_t, corr_t):
-    """从一对句子里提取替换片段，过滤噪声。"""
-    sm = SequenceMatcher(None, orig_t, corr_t)
+def _diff_pairs(orig_s, corr_s, i1, i2, j1, j2):
+    """从字符流的一个 replace 区段提取替换片段，过滤噪声。
+
+    区段内做二级 diff，把「标点/语气词变化」和「真修正」拆开分别判定。"""
+    sm = SequenceMatcher(None, orig_s[i1:i2], corr_s[j1:j2], autojunk=False)
     pairs = []
-    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+    for tag, oi1, oi2, oj1, oj2 in sm.get_opcodes():
         if tag != "replace":
             continue
-        wrong, right = orig_t[i1:i2], corr_t[j1:j2]
+        wrong = orig_s[i1 + oi1:i1 + oi2]
+        right = corr_s[j1 + oj1:j1 + oj2]
         if not wrong or not right:
             continue
         if len(wrong) > 15 or len(right) > 15:
             continue  # 整句重写级别，不适合做热词
-        # 含标点/空白的一律不算（多为对齐错位的碎片）
+        # 含标点/空白的一律不算（多为断句调整的碎片）
         if re.search(r"[，。、？！；：\s「」（）]", wrong + right):
             continue
         # 纯数字差异不算（数字格式偏好，非识别错误）
